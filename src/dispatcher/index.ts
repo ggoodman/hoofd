@@ -5,8 +5,9 @@ export const META = 'M';
 export const TITLE = 'T';
 export const LINK = 'L';
 export const TEMPLATE = 'P';
+export const SCRIPT = 'S';
 
-type HeadType = 'T' | 'P' | 'M' | 'L';
+type HeadType = 'T' | 'P' | 'M' | 'L' | 'S';
 type MetaKeyword = 'name' | 'charset' | 'http-equiv' | 'property';
 export interface MetaPayload {
   keyword: MetaKeyword;
@@ -66,6 +67,7 @@ const changeOrCreateMetaTag = (meta: MetaPayload) => {
 const createDispatcher = () => {
   let lang: string;
   let linkQueue: any[] = [];
+  let scriptQueue: any[] = [];
   let titleQueue: string[] = [];
   let titleTemplateQueue: string[] = [];
   let metaQueue: MetaPayload[] = [];
@@ -109,7 +111,9 @@ const createDispatcher = () => {
     _addToQueue: (type: HeadType, payload: MetaPayload | string): void => {
       if (!isServerSide) processQueue();
 
-      if (type === TITLE) {
+      if (type === SCRIPT) {
+        scriptQueue.push(payload);
+      } else if (type === TITLE) {
         titleQueue.splice(currentTitleIndex++, 0, payload as string);
       } else if (type === TEMPLATE) {
         titleTemplateQueue.splice(
@@ -202,6 +206,7 @@ const createDispatcher = () => {
 
       const visited = new Set();
       const links = [...linkQueue];
+      const scripts = [...scriptQueue];
       metaQueue.reverse();
       // @ts-ignore
       const metas = [...metaQueue].filter((meta) => {
@@ -215,12 +220,14 @@ const createDispatcher = () => {
       titleTemplateQueue = [];
       metaQueue = [];
       linkQueue = [];
+      scriptQueue = [];
       currentTitleIndex = currentTitleTemplateIndex = currentMetaIndex = 0;
 
       return {
         lang,
         title,
         links,
+        scripts,
         metas: metas.map((meta) =>
           meta.keyword === 'charset'
             ? {
